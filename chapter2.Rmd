@@ -1,13 +1,93 @@
-# Insert chapter 2 title here
+# Chapter 2: Regression and model validation
 
 *Describe the work you have done this week and summarize your learning.*
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+- I learned the basics of data mangling. It was quite interesting part to form new sets of data from pre-existing. This took me about two hours to understand fully and without help. I have programming background but without the cheat sheets the work would have taken a little bit longer.
+- I learned a lot about the regression analysis. I have never done that before and there were quite many new topics which I needed to learn from the internet. In the end I was pleased that I understood the plots really well and also the data behind the questionnaire.
+- Now my brains noticed that a month before a problem occurred which I could use R instead of Excel to get a better solution.
 
+---
+
+### 0. Pre-page code
 ```{r}
-date()
+library(GGally)
+library(ggplot2)
+
+rd <- read.table(".\\data\\learning2014.txt",
+                 as.is = TRUE,
+                 sep = "\t",
+                 header = TRUE)
 ```
 
-Here we go again...
+
+### 1. Data set explanation
+
+```{r}
+str(rd)
+```
+
+The data set is collected as a part of international research project where the study topic was to ask questions about teaching and learning. There were a total of 183 participants who answered the questionnaire. The questionaire was about how do attendee's study in the course. Are they doing a deep learning, where they study hard and focus into details, or are they strategic where they plan their studies and work evenly through the course time. Last on is do they study on surface so they get the course easily done and move to next topic early.
+
+There are 32 questions (in data set marked with STxx, SUxx, and Dxx) which are collected for three internal dimensions (deep, surface, and strategic). Each of the set of the questions (STxx, SUxx, and Dxx) are classified and later collected into collections which interpret higher idea behind each approach (d_xx, su_xx and st_xx). These classifications are used to create the overall points of each approach (values deep, surf, and stra).
+
+Assistant questions are asked in the questionnaires, which are measured with Aa-Af, Ca-Ch, and Da-Dj. Additionally the basic data are also stored into this data set (age, gender, attitude and total points).
+
+---
+
+
+
+### 2. Graphical overview
+```{r}
+myplot <- ggpairs(rd,
+                  columns = c(57, 58, 59, 64, 67, 71),
+                  mapping = ggplot2::aes(col = gender, alpha = 0.3),
+                  lower = list(combo = wrap("facethist", bins = 20)))
+
+myplot
+```
+
+The charts are colour coded by the gender (red being Female). With this chart the reader can see distribution of questionnaire points depending on the attendee's gender, age, and attitude to statistics
+
+The students were quite young and the attitude was a little bit better with Males. Overall points were quite good and the deep approach to studying was the most common one. The strategic method was used in combination of deep learning but the surface learning approach was not that common.
+
+---
+
+
+
+### 3. Regression model
+```{r}
+diagplots <- lm(points ~ surf + stra + deep, rd)
+summary(diagplots)
+```
+
+I chose three explanatory variables: deep, surf and stra.
+
+I chose these variables because they are the collection of the set of questions. These three variables have relationship towards the total points of the questionnaire.
+
+Residuals are essentially the difference between the actual observed response values. In this case what is the largest variation of the points compared into the total amount of points.
+
+Estimate is the individual approach points which are estimated to be in line with the total amount of points. Std. Error is the average error value of the approach points. Coefficient t values count how far away the points are from total points. Last the Pr is how likely it will deviate from t value.
+
+
+
+---
+
+
+
+### 4. Relationship between the chosen explanatory variables
+
+Multiples R-squared model takes every unknown parameter to account, where adjusted R-squared removes those which are far away from the linear model. 6% variance means that the model fits well with the actual data.
+
+---
+
+
+### 5. Diagnostic plots
+```{r}
+par(mfrow = c(2,2))
+plot(diagplots, which = c(1, 2, 5))
+
+```
+
+Not a glue what these are. 
+
+---
