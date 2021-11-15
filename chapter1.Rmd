@@ -3,14 +3,12 @@
 
 *Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
 
-```{r}
-date()
 
-```
 ### Where I found the course?
 I just picked this course from University of Helsinki course catalog.
 
 ---
+
 ### Feelings about the course
 I am really **excited** to learn R, because I want to get new tools to help me to process data. I usually use Excel and as a software engineer it would be better to use my current skills at their maximum.
 
