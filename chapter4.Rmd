@@ -1,13 +1,160 @@
-# Insert chapter 2 title here
+# Exercise 4; Clustering and classification
 
 *Describe the work you have done this week and summarize your learning.*
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+- Task 3 was hard for me. I didn't get them lined up next to each other. Maybe next week I get better presentation
 
 ```{r}
 date()
+library(MASS)
+library(plotly)
 ```
 
-Here we go again...
+### Task 2: Explore the data
+```{r}
+data("Boston")
+
+dim(Boston)
+colnames(Boston)
+```
+
+Boston data frame is a sample R dataset from R library MASS. The Boston data frame has 506 rows and 14 columns. This data frame contains the following columns:
+
+- crim = per capita crime rate by town.
+- zn = proportion of residential land zoned for lots over 25,000 sq.ft.
+- indus = proportion of non-retail business acres per town.
+- chas = Charles River dummy variable (= 1 if tract bounds river; 0 otherwise).
+- nox = nitrogen oxides concentration (parts per 10 million).
+- rm = average number of rooms per dwelling.
+- age = proportion of owner-occupied units built prior to 1940.
+- dis = weighted mean of distances to five Boston employment centres.
+- rad = index of accessibility to radial highways.
+- tax = full-value property-tax rate per \$10,000.
+- ptratio = pupil-teacher ratio by town.
+- black = 1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town.
+- lstat = lower status of the population (percent).
+- medv = median value of owner-occupied homes in \$1000s.
+
+
+### Task 3: Graphical overview of the dataset
+```{r}
+summary(Boston)
+par(mfrow=c(7,2), fin=c(4,4), mar=c(2,5,2,1), las=1, bty="n")
+plot(Boston$crim, ylab = "Per capita", main = "Crime Rate")
+plot(Boston$zn, ylab = "lots over 25,000 sq.ft", main = "Land zoned for lots")
+plot(Boston$indus, ylab = "acres per town", main = "Non-retail business acres")
+plot(Boston$medv, ylab = "Value of homes", main = "Owner-occupied homes")
+plot(Boston$nox, ylab = "parts per 10 million", main = "NOX concentration")
+plot(Boston$rm, ylab = "number of rooms", main = "Rooms per dwelling")
+plot(Boston$age, ylab = "built prior to 1940", main = "Owner-occupied units built")
+plot(Boston$dis, ylab = "weighted mean", main = "Distances to employment centres")
+plot(Boston$rad, ylab = "index", main = "Accessibility to highways")
+plot(Boston$tax, ylab = "tax rate per 10,000", main = "Property-tax rate")
+plot(Boston$ptratio, ylab = "ratio", main = "Pupil-teacher")
+plot(Boston$black, ylab = "1000(Bk - 0.63)^2", main = "Proportion of blacks")
+plot(Boston$lstat, ylab = "Percent", main = "Lower status")
+```
+
+Compared to crime rate. The higher crime rate seems to be in rented apartments, with higher property tax rate. The owners doesn't live in the same area. Also higher NOX rate (car pollution) and closer to highway seems to be increasing the crime rate. Employment centers are far away. On the other hand the crime rate is not relevant to skin color or apartment room count.
+
+
+### Task 4: Standardize the dataset
+```{r}
+# Make standardized dataset
+boston_scaled <- scale(Boston)
+summary(boston_scaled)
+
+class(boston_scaled)
+boston_scaled <- as.data.frame(boston_scaled)
+
+# Create categorical variable
+bins <- quantile(boston_scaled$crim)
+crime <- cut(boston_scaled$crim, breaks = bins, include.lowest = TRUE, label = c("low", "med_low", "med_high", "high"))
+
+# Drop the crime rate from old data and add new categorial
+boston_scaled <- dplyr::select(boston_scaled, -crim)
+boston_scaled <- data.frame(boston_scaled, crime)
+
+# Divide the dataset to train and test sets.
+n <- nrow(boston_scaled)
+
+# choose randomly 80% of the rows
+ind <- sample(n, size = n * 0.8)
+
+# create train set
+train <- boston_scaled[ind,]
+
+# create test set 
+test <- boston_scaled[-ind,]
+
+dim(test)
+dim(train)
+```
+
+Comparing the two summaries tells us that scaling doesn't work on the most of the variables. When scaling, there are variables which can't be negative. After scaling these variables are negative, because no clustering has being done.
+
+
+### Task 5: Linear discriminant analysis on train set
+```{r}
+lda.fit <- lda(crime ~ ., data = train)
+
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)
+}
+
+classes <- as.numeric(train$crim)
+
+plot(lda.fit, dimen = 2, col = classes, pch = classes, xlab = "Crime Rate", ylab = "Other factors")
+lda.arrows(lda.fit, myscale = 2)
+```
+
+From this data we can see that accessibility to radial highways affects the crime rates the most. Nitrogen oxide concentration also has a noted link in the data for incrieasing the crime rate. Instead when proportion of residential land zones increases, the crime rates are lower.
+
+
+### Task 6: Predict the test dataset crime variable with LDA model
+```{r}
+crimeCat <- test$crime
+test <- dplyr::select(test, -crime)
+
+lda.pred <- predict(lda.fit, newdata = test)
+table(correct = crimeCat, predicted = lda.pred$class)
+```
+
+High crime rate predictions are quite consent and it seems to be more variance on the low and med_low predictions.
+
+
+### Task 7: Standardize the original Boston dataset
+```{r}
+data("Boston")
+Boston <- scale(Boston)
+
+km <-kmeans(Boston, centers = 4)
+pairs(Boston, col = km$cluster)
+```
+
+I came up with four clusters. The reason for this is that from the charts the the clusters are not that dispersed and there are big centers from all the charts, which can be combined. With five clusters, there were one too small cluster or it was too dispersed. With three, there was even clusters, but with four there are also four quite even clusters. More is better.
+
+
+### Super Bonus: 3d Matrix
+```{r}
+model_predictors <- dplyr::select(train, -crime)
+
+# check the dimensions
+dim(model_predictors)
+dim(lda.fit$scaling)
+
+# matrix multiplication
+matrix_product <- as.matrix(model_predictors) %*% lda.fit$scaling
+matrix_product <- as.data.frame(matrix_product)
+
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color = train$crime)
+
+plot_ly(x = matrix_product$LD1, y = matrix_product$LD2, z = matrix_product$LD3, type= 'scatter3d', mode='markers', color = km$centers)
+```
+
+Both give the same value, but with crime, the values are colored.
