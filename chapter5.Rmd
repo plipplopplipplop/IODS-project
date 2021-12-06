@@ -1,13 +1,78 @@
-# Insert chapter 2 title here
+# Chapter 5: Dimensionality reduction techniques
 
 *Describe the work you have done this week and summarize your learning.*
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+- 
 
 ```{r}
 date()
+library(FactoMineR)
+library(tidyr)
+library(ggplot2)
+data("tea")
+human <- read.csv(file = ".\\data\\human2.csv", header = TRUE)
 ```
 
-Here we go again...
+### Task 1: Graphical overview of the dataset
+```{r}
+str(human)
+```
+
+The HDI was created to emphasize that people and their capabilities should be the ultimate criteria for assessing the development of a country, not economic growth alone. The HDI can also be used to question national policy choices, asking how two countries with the same level of GNI per capita can end up with different human development outcomes.
+
+This data set is partial collection of dataset which calculated the HDI country by country. The human data set contains the following values:
+
++ X: Header of each row. Every row is a data from a single country
++ life: Life expectancy index
++ gni: Gross National Income. Modified by removing comma from the income.
++ labR: Female and male labour force participation rates
++ edu2R: Female and male population with at least secondary education
++ parl: Female and male shares of parliamentary seats
++ mmr: Maternal Mortality ratio
++ abr: Adolescent Birth Rate
++ edu: Expected years of schooling
+
+
+### Task 2: Perform principal component analysis
+```{r}
+pca_human <- prcomp(human[-1])
+s <- summary(pca_human)
+pca_pr <- round(100*s$importance[2, ], digits = 2)
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+biplot(pca_human, choices = 1:2, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_lab[1], ylab = pc_lab[2], main = "GNI based PCA")
+```
+
+
+### Task 3: Standardize the variables and repeat the above analysis
+```{r}
+pca_human <- prcomp(scale(human[-1]))
+s <- summary(pca_human)
+pca_pr <- round(100*s$importance[2, ], digits = 2)
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+biplot(pca_human, choices = 1:2, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_lab[1], ylab = pc_lab[2], main = "Scaled PCA")
+```
+
+When comparing standardized and not standardized biplot charts you can clearly see that the scaling is off. The values of the gni are really large, because at data mangling the comma was taken out and textual value was transferred into numberic. This changed the values into almost 100 000. Without scaling, these gni values are really big compared to other data so the biplot is really off. You can see from not standardized one that the only arrow is gni, and others are so small that they are not even drawn.
+
+
+### Task 4: Personal interpretations, two principal component dimensions
+
+There is a colleration between working men and women and men and women in parliament seats. Both of these factors raise life expency of Human Developmen Index.This is true, because it is correlated to gni which is basically income. When having more income, you have better service and has better way to survive. But it is only 17% of the factors calculated. Comparing data from multiple countries, many women are working and are in parliament.
+
+Rest of the measured values are 53,6% of the reasons which affect the HDI. Maternal Mortal Ratio and Adolescent Birth Rate are on the positive side and it is getting better. On the other hand education and life expetancy and GNI are lacking behind. People die young and are not that educated.
+
+
+### Task 5: Personal interpretations, two principal component dimensions
+```{r}
+str(tea)
+keep_columns <- c("Tea", "How", "how", "sugar", "where", "lunch")
+tea_time <- dplyr::select(tea, one_of(keep_columns))
+tidyr::gather(tea_time) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar() + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+
+mca <- MCA(tea_time, graph = FALSE)
+plot(mca, invisible=c("ind"), habillage = "quali")
+```
+
+I chose a dataset which focused on the tea, which people are consumed. Are the bags or loose tea, with sugar or without, where bought, which type, at lunch, or do people consume tea with addition flavours like lemon or milk.
+
+As you can see from MCA factor map, and from the bar charts on the top. The data can be analysed. With MCA factor map you can see that closer to origo, the common it is. Doing the MCA factoring, you can see the compared data of how the values affect each other. Here you can see that Earl Gray is not that away from black tea and the tea is also consumed quite often at lunch time. Milk also pays a larger role than originally expected. 

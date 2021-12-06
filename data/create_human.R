@@ -42,4 +42,32 @@ str(gii)
 # Task 6
 human <- inner_join(hd, gii, by = "country", suffix = c(".h", ".g"))
 dim(human)
-write.csv(human, ".\\data\\human.csv")
+write.csv(human, ".\\data\\human1.csv")
+
+
+# (c) Miikka Juomoja 6.12.2021
+#
+# Data Wrangling exercise 5
+library(stringr)
+human <- read.csv(file = ".\\data\\human1.csv")
+
+# Task 1: gni into numeric (I also removed commas)
+human$gni <- stringr::str_replace(human$gni, pattern=",", replace ="") %>% as.numeric()
+
+# Task 2: Exclude unneeded variables (NOTE! own naming because exercise 4)
+keep <- c("country", "edu2R", "labR", "life", "edu", "gni", "mmr", "abr", "parl")
+human <- select(human, one_of(keep))
+
+# Task 3: Remove all rows with missing values 
+human <- filter(human, complete.cases(human))
+
+# Task 4: Remove the observations which relate to regions instead of countries.
+last <- nrow(human) - 7 # Last 7 areas
+human <- human[1:last,]
+
+# Task 5: Row name = country, remove country
+rownames(human) <- human$country
+human <- dplyr::select(human, -country)
+dim(human)
+
+write.csv(human, ".\\data\\human2.csv", row.names = TRUE)
