@@ -1,13 +1,124 @@
-# Insert chapter 2 title here
+# Exersice 6: Analysis of longitudinal data
 
-*Describe the work you have done this week and summarize your learning.*
-
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+* I learned what longitudinal data means.
 
 ```{r}
 date()
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+
+BPRS <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/BPRS.txt", sep  =" ", header = T)
+RATS <- read.table("https://raw.githubusercontent.com/KimmoVehkalahti/MABS/master/Examples/data/rats.txt", sep  ="\t", header = T)
 ```
 
-Here we go again...
+### Task 1: Implement the analyses of Chapter 8 with RATS
+```{r}
+RATS
+
+RATS$ID <- factor(RATS$ID)
+RATS$Group <- factor(RATS$Group)
+
+# Convert data to long form
+RATSL <- RATS %>%
+  gather(key = WD, value = Weight, -ID, -Group) %>%
+  mutate(Time = as.integer(substr(WD, 3, 4)))
+
+ggplot(RATSL, aes(x = Time, y = Weight, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(limits = c(min(RATSL$Weight), max(RATSL$Weight)))
+```
+
+RATS are about rat weigh measure over 1-64 Days time span. There are 16 individual rats, which are categorized into three groups. The previous data presents the measurement of each group and each individual rat in the group over the 64 days. The data is consistent and the rats are really close to each other in each group. Except Group 2, where a single rat is substantially over weighted compared to other rats in the same group.
+
+```{r}
+# Standardize the data
+RATSL <- RATSL %>%
+  group_by(Time) %>%
+  mutate(stdWeight = (Weight - mean(Weight))/sd(Weight)) %>%
+  ungroup()
+
+ggplot(RATSL, aes(x = Time, y = stdWeight, linetype = ID)) +
+  geom_line() +
+  scale_linetype_manual(values = rep(1:10, times=4)) +
+  facet_grid(. ~ Group, labeller = label_both) +
+  theme(legend.position = "none") + 
+  scale_y_continuous(name = "standardized bprs")
+```
+
+Standardization assumes that some of the rats to keep the weight as is.
+
+```{r}
+n <- RATSL$Time %>% unique() %>% length()
+
+RATSS <- RATSL %>%
+  group_by(Group, Time) %>%
+  summarise(mean = mean(Weight), se = sd(Weight)/sqrt(n) ) %>%
+  ungroup()
+
+ggplot(RATSS, aes(x = Time, y = mean, linetype = Group, shape = Group)) +
+  geom_line() +
+  geom_point(size=3) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+  theme(legend.position = c(0.8,0.8)) +
+  scale_y_continuous(name = "mean(Weight) +/- se(Weight)")
+```
+
+Overall we can see from the previous chart that the group one (smallest rats) are consistently keeping the weight gain in 10%. Same goes with group 3. But the group two gain additional weight 15%. This improvement can be tolerated with the single larger weighted mouse.
+
+```{r}
+RATSL8S <- RATSL %>%
+  filter(Time > 0) %>%
+  group_by(Group, ID) %>%
+  summarise(mean=mean(Weight)) %>%
+  ungroup()
+
+RATSL8S <- RATSL8S %>% filter(mean < 550 & mean > 250)
+
+ggplot(RATSL8S, aes(x = Group, y = mean)) +
+  geom_boxplot() +
+  stat_summary(fun = "mean", geom = "point", shape=23, size=4, fill = "white") +
+  scale_y_continuous(name = "mean(Rat Weight)")
+```
+
+When checking the box plot, it can be seen that even thought the weight span is not that large, the larger weighted rats tend to be gaining more weight instead of loosing. This can be seen with the median value of the box plots. The light weighted rats are getting lighter while in other groups the trend is up.
+
+
+
+### Task 2: Implement the analyses of Chapter 9 with BPRS
+```{r}
+BPRS
+
+BPRS$treatment <- factor(BPRS$treatment)
+BPRS$subject <- factor(BPRS$subject)
+
+BPRSL <-  BPRS %>% gather(key = weeks, value = bprs, -treatment, -subject)
+BPRSL <- BPRSL %>% mutate(week = as.integer(substr(weeks, 5, 5)))
+
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) + geom_point(aes(col = treatment))
+```
+
+BPRS data set contains 40 individuals who are using two treatments (Treatment A: 20 individuals, Treatment B: 20 Individuals). Each of the individuals use the treatment for 8 weeks and data is collected from that. Each of the individual are measured with BPRS:
+
+The BPRS assesses the level of 18 symptom constructs such as hostility, suspiciousness, hallucinations and grandiosity; each of these is rated from one (not present) to seven (extremely severe). The scale is used to evaluate patients suspected of having schizophrenia.
+
+As you can see from previous plot, the given treatments have clear side affects at the beginning of the measurement period, but the treatment 1 loses many of the side effects, or they get milder. But with treatment 2 the side effects doesn't stabilize that much on several individuals.
+
+```{r}
+ggplot(BPRSL, aes(x = week, y = bprs, group = subject)) +
+  geom_boxplot() +
+  scale_x_continuous(name = "Week (1-8)", breaks = seq(0, 60, 10)) +
+  scale_y_continuous(name = "BPRS") +
+  theme(legend.position = "top")
+```
+
+When examining the same data with a box plot, then the overall amount of side effects can be seen more clearly. The side effects are clearly visible until week 5, from after the side effects start to dissipate. Still there are side effects and combining this data to previous plot, we can understand that the treatment 2 is not that good as wanted.
+
+```{r}
+str(BPRS)
+pairs(BPRSL[-3], pch = 19, col = BPRSL$treatment)
+```
+
